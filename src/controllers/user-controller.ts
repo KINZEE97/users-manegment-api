@@ -3,27 +3,30 @@ import { prisma } from "../database/prismaClient";
 import bcrypt from "bcrypt"
 import { HttpError } from "../error/httpError";
 import jwt from "jsonwebtoken"
+import { UsersRepositories } from "../repositories/UserRepositorie";
+import { createUserSchema } from "./schema/usersSchema";
 
 const SECRET_JWT_KEY = process.env.SECRET_JWT_KEY
 
 
 export class UsersController {
+    private usersRepositories: UsersRepositories
+    constructor(usersRepositories: UsersRepositories) {
+        this.usersRepositories = usersRepositories
+    }
     register: Handler = async (req , res , next ) => {
         try {
+            const body = createUserSchema.parse(req.body)
 
-            const { email, password, name } = req.body
-
-            if(!email) throw new HttpError(400, "Email Required or data type wrong")
-            if(!password) throw new HttpError(400, "Password Required or data type wrong")
-            if(!name) throw new HttpError(400, "Name Required or data type wrong")
-
-            
-            const hashedPassword = await bcrypt.hash(password, 10)
-            console.log(typeof(hashedPassword))
-            const newUser = await prisma.user.create({
-                data: {name: name, email: email, password: hashedPassword}
+            if (!body.name || typeof body.name !== "string") throw new HttpError(400, "Name is required and must be a string");
+            if (!body.email || typeof body.email !== "string") throw new HttpError(400, "Email is required and must be a string");
+            if (!body.password || typeof body.password !== "string") throw new HttpError(400, "Password is required and must be a string")
+            const hashedPassword = await bcrypt.hash(body.password , 10)
+            const newUser = await this.usersRepositories.create({
+                name: body.name,
+                email: body.email,
+                password: hashedPassword
             })
-
             res.status(201).json(newUser)
         } catch (error) {
             next(error)
