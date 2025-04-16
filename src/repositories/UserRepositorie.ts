@@ -16,7 +16,6 @@ export interface UserWhereParams {
         like?: string
     }
 }
-
 export interface FindUserParams{
    where?: UserWhereParams
 }

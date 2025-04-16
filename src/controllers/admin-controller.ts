@@ -1,7 +1,7 @@
 import { Handler } from "express";
 import { prisma } from "../database/prismaClient";
 import { HttpError } from "../error/httpError";
-import { createUserSchema } from "./schema/usersSchema";
+import { createUserSchema, updateUser } from "./schema/usersSchema";
 import bcrypt from "bcrypt";
 
 // the admin controller will have the normal CRUD
@@ -55,4 +55,32 @@ export class AdminController {
             next(error);
         }
     };
+
+    updateUser: Handler = async(req , res , next ) => {
+        try {
+            const userId = req.params.userId
+            const {name, email, password, role} = updateUser.parse(req.body)
+            const user = await prisma.user.findUnique({where: {id: +userId} })
+            if(!user) throw new HttpError(404, "User not found")
+            
+            if (!password) throw new HttpError(400, "Password is required");
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const updatedAt: Date = new Date()
+
+            const updatedUser = await prisma.user.update({
+                where: {id: +userId },
+                data: {
+                    name: name,
+                    email: email,
+                    password: hashedPassword,
+                    role: role,
+                    updatedAt: updatedAt
+                }
+            })
+
+            res.status(200).json(updatedUser)
+        } catch (error) {
+            next(error)
+        }
+    }
 }

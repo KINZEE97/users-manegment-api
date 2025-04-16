@@ -18,6 +18,7 @@ router.post("/user", userController.register)
 router.get("/admin", adminController.listUsers)
 router.get("/admin/user", adminController.findUser)
 router.post("/admin", adminController.createAdminUser)
+router.put("/admin/:userId", adminController.updateUser)
 
 
 export { router }
