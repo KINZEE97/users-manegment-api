@@ -4,9 +4,9 @@
 
 ---
 
-##Stacks used in this api 
--Typscript
--Node.js
--Express
--Prisma
--PostgreSQL
+## Stacks used in this api 
+- Typscript
+- Node.js
+- Express
+- Prisma
+- PostgreSQL
