@@ -42,7 +42,8 @@ export class AdminController {
     findUser: Handler = async (req, res, next) => {
         try {
             const { name, email } = req.body;
-            if (!name || !email) throw new HttpError(404, "User not found");
+            if (!name) throw new HttpError(404, "User name not found");
+            if ( !email) throw new HttpError(404, "User email not found");
 
             const user = await prisma.user.findUnique({
                 where: { email: email, name: {contains: name, mode: "insensitive"} },
@@ -79,6 +80,19 @@ export class AdminController {
             })
 
             res.status(200).json(updatedUser)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    deleteUser: Handler = async (req , res , next ) => {
+        try {
+            const userId = +req.params.userId
+            const user = await prisma.user.findUnique({where: { id : userId} })
+            if(!user) throw new HttpError(404, "User not found")
+            
+            await prisma.user.delete({where: {id : userId} })
+            res.json({message: `User: ${user.name} was deleted successfully!`})
         } catch (error) {
             next(error)
         }
