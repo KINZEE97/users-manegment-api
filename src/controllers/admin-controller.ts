@@ -1,14 +1,13 @@
 import { Handler } from "express";
-import { prisma } from "../database/prismaClient";
-import { HttpError } from "../error/httpError";
 import { createUserSchema, updateUser } from "./schema/usersSchema";
-import bcrypt from "bcrypt";
+import { AdminService } from "../services/AdminService";
 
 // the admin controller will have the normal CRUD
 export class AdminController {
-    listUsers: Handler = async (req, res, next) => {
+    constructor(private readonly adminService: AdminService) {}
+    listAllUsers: Handler = async (req, res, next) => {
         try {
-            const users = await prisma.user.findMany();
+            const users = await this.adminService.findAllUser();
             res.status(200).json(users);
         } catch (error) {
             next(error);
@@ -18,20 +17,9 @@ export class AdminController {
     createAdminUser: Handler = async (req, res, next) => {
         try {
             const body = createUserSchema.parse(req.body);
-            if (!body.email) throw new HttpError(400, "Email Required");
-            if (!body.name) throw new HttpError(400, "Name Required");
-            if (!body.password) throw new HttpError(400, "Password Required");
-            if (!body.role) throw new HttpError(400, "Role Required");
-
-            const hashedPassword = await bcrypt.hash(body.password, 10);
-
-            const newAdminUser = await prisma.user.create({
-                data: {
-                    name: body.name,
-                    email: body.email,
-                    password: hashedPassword,
-                    role: body.role,
-                },
+            const newAdminUser = await this.adminService.createAdminUser({
+                ...body,
+                role: body.role ?? "USER", // Default to "USER" if role is undefined
             });
             res.status(201).json(newAdminUser);
         } catch (error) {
@@ -41,60 +29,40 @@ export class AdminController {
 
     findUser: Handler = async (req, res, next) => {
         try {
-            const { name, email } = req.body;
-            if (!name) throw new HttpError(404, "User name not found");
-            if ( !email) throw new HttpError(404, "User email not found");
-
-            const user = await prisma.user.findUnique({
-                where: { email: email, name: {contains: name, mode: "insensitive"} },
-            });
-
-            if(!user) throw new HttpError(404, "User not found")
-
-            res.status(200).json(user);
+            const id = +req.params.id;
+            const user = await this.adminService.findUserById(id);
+            const { password, ...userWithoutPassword } = user as { password?: string; [key: string]: any };
+            res.json(userWithoutPassword);
         } catch (error) {
             next(error);
         }
     };
 
-    updateUser: Handler = async(req , res , next ) => {
+    updateUser: Handler = async (req, res, next) => {
         try {
-            const userId = req.params.userId
-            const {name, email, password, role} = updateUser.parse(req.body)
-            const user = await prisma.user.findUnique({where: {id: +userId} })
-            if(!user) throw new HttpError(404, "User not found")
-            
-            if (!password) throw new HttpError(400, "Password is required");
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const updatedAt: Date = new Date()
+            const userId = +req.params.userId;
+            const body = updateUser.parse(req.body);
+            const updatedUser = await this.adminService.updateUser(userId, {
+                ...body,
+                role: body.role ? ["ADMIN", "USER"] : undefined,
+            });
 
-            const updatedUser = await prisma.user.update({
-                where: {id: +userId },
-                data: {
-                    name: name,
-                    email: email,
-                    password: hashedPassword,
-                    role: role,
-                    updatedAt: updatedAt
-                }
-            })
-
-            res.status(200).json(updatedUser)
+            res.status(200).json(updatedUser);
         } catch (error) {
-            next(error)
+            next(error);
         }
-    }
+    };
 
-    deleteUser: Handler = async (req , res , next ) => {
+    deleteUser: Handler = async (req, res, next) => {
         try {
-            const userId = +req.params.userId
-            const user = await prisma.user.findUnique({where: { id : userId} })
-            if(!user) throw new HttpError(404, "User not found")
-            
-            await prisma.user.delete({where: {id : userId} })
-            res.json({message: `User: ${user.name} was deleted successfully!`})
+            const userId = +req.params.userId;
+            const user = await this.adminService.findUserById(userId);
+            await this.adminService.deleteUser(userId);
+            res.json({
+                message: `User: ${user.name} was deleted successfully!`,
+            });
         } catch (error) {
-            next(error)
+            next(error);
         }
-    }
+    };
 }

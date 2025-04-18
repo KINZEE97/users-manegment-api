@@ -14,7 +14,8 @@ export interface LoginUser {
 export interface UserWhereParams {
     email?: {
         like?: string
-    }
+    },
+    
 }
 export interface FindUserParams{
    where?: UserWhereParams
