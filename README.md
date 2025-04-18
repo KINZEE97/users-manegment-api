@@ -107,12 +107,12 @@ Before starting, you will need the following tools installed:
 
 ---
 
-## 🧪 Tests
+## 🧪 javaScript build
 
-To run tests (if configured), execute:
+To compile to javaScript, execute:
 
 ```bash
-npm test
+npm run build
 ```
 
 ---
